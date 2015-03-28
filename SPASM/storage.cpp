@@ -184,7 +184,7 @@ void init_storage() {
 	label_table = hash_init (MAX_LABELS, (HASH_REMOVE_CALLBACK) destroy_label_value);
 
 	add_define (strdup ("SPASM"), NULL)->contents = strdup ("1");
-	add_define (strdup ("SPASMVER"), NULL)->contents = strdup ("2");
+	add_define (strdup ("SPASMVER"), NULL)->contents = strdup ("3");
 	add_define (strdup ("__LINE"), NULL)->contents = strdup ("0");
 	add_define (strdup ("__FILE"), NULL)->contents = strdup ("Init");
 	add_define (strdup ("TRUE"), NULL)->contents = strdup ("1");

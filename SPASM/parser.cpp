@@ -102,11 +102,11 @@ bool parser_forward_ref_err;
 int parse_depth;
 
 /*
-Parses an expression, sets
-the result in value and
-returns TRUE if successful,
-otherwise sets value to 0
-and returns FALSE
+* Parses an expression, sets
+* the result in value and
+* returns TRUE if successful,
+* otherwise sets value to 0
+* and returns FALSE
 */
 
 bool parse_num (const char *expr, int *value) {
@@ -126,8 +126,8 @@ bool parse_num (const char *expr, int *value) {
 }
 
 /*
-Parses expression,
-ignoring errors
+* Parses expression,
+* ignoring errors
 */
 
 int parse_f (const char *expr) {
@@ -147,10 +147,10 @@ int parse_f (const char *expr) {
 
 
 /*
-Parses the contents of a define,
-handling preops, and returns
-the first line with a value,
-allocated
+* Parses the contents of a define,
+* handling preops, and returns
+* the first line with a value,
+* allocated
 */
 
 char *parse_define (define_t *define)
@@ -181,9 +181,9 @@ char *parse_define (define_t *define)
 
 
 /*
-Parses a single number, sets
-the value, and returns the
-end of the number
+* Parses a single number, sets
+* the value, and returns the
+* end of the number
 */
 
 static const char *parse_single_num (const char *expr, int *value) {
@@ -319,7 +319,7 @@ static const char *parse_single_num (const char *expr, int *value) {
 				}
 			}
 
-			//see if it's a local label
+			// see if it's a local label
 			if (!strcmp (name, "_")) {
 				free (name);
 				if (get_curr_reusable() + 1 < get_num_reusables())
@@ -332,15 +332,114 @@ static const char *parse_single_num (const char *expr, int *value) {
 					return NULL;
 				}
 			}
+			// it's a normal label
 			else if (label != NULL) {
 				*value = label->value;
 				free (name);
-				//or the "eval" macro
-			} else if (!strcasecmp (name, "eval") && *expr == '(') {
+			}
+			// the "eval" macro
+			else if (!strcasecmp (name, "eval") && *expr == '(') {
 				free(name);
 				//show_warning ("eval() has no effect except in #define");
 				expr = parse_num_full (expr, value, 0);
-				//then a normal label
+			}
+			// string equals streq
+			else if (!strcasecmp (name, "streq") && *expr == '(')
+			{
+				free(name);
+				expr++;
+
+				char *arg = NULL;
+				char *last_expr = skip_whitespace(expr);
+				char *last_expr_end;
+				if (*last_expr == '\"') 
+					last_expr_end = skip_to_name_end(last_expr+1)+1;
+				else
+					last_expr_end = skip_to_name_end(last_expr);
+				char *first_string = NULL;
+				*value = 0; // default is false
+				arg_context_t context = ARG_CONTEXT_INITIALIZER;
+				while ((arg = extract_arg_string(&expr, &context)) != NULL)
+				{
+					define = search_defines (arg);
+					// Is a define? (e.g. a macro parameter) => then resolve
+					if (define != NULL)
+					{
+						if (define->contents != NULL)
+						{
+							char * content = strdup(define->contents);
+							if (content[0] == '\"') reduce_string(content);
+							if (!first_string)
+							{
+								first_string = content;
+							}
+							else {
+								*value = !strcmp(first_string, content);
+								free(first_string);
+								free(content);
+								break;
+							}
+						}
+					}
+					// Is in code? => then check pointer
+					else
+					{
+						int len = last_expr_end - last_expr;
+						char * content = strndup(last_expr, len);
+						if (content[0] == '\"') { reduce_string(content); len -= 2; }
+						if (!first_string)
+						{
+							first_string = content;
+						}
+						else {
+							*value = !strncmp(first_string, content, len);
+							free(first_string);
+							free(content);
+							break;
+						}
+					}
+					last_expr = skip_whitespace(expr);
+					last_expr_end = skip_to_name_end(last_expr);
+					if (*last_expr == '\"') 
+						last_expr_end++;
+				}
+
+				if (*expr == ')') expr++;
+
+			}
+			// or the "str" macro that checks for string parameters
+			else if (!strcasecmp (name, "str") && *expr == '(')
+			{
+				free(name);
+				expr++;
+
+				char *arg = NULL;
+				int args = 0;
+				*value = 0; // default is false
+				char *last_expr = skip_whitespace(expr);
+				arg_context_t context = ARG_CONTEXT_INITIALIZER;
+				while ((arg = extract_arg_string(&expr, &context)) != NULL)
+				{
+					define = search_defines (arg);
+					// Is a define? (e.g. a macro parameter) => then resolve
+					if (define != NULL)
+					{
+						if (define->contents != NULL)
+						{
+							if (args++ == 0) *value = 1; // init
+							*value &= define->contents[0] == '\"';
+						}
+					}
+					// Is in code? => then check pointer
+					else
+					{
+						if (args++ == 0) *value = 1; // init
+						*value &= *last_expr == '\"';
+					}
+					last_expr = skip_whitespace(expr);
+				}
+
+				if (*expr == ')') expr++;
 			}
 			else if (!strcasecmp (name, "getc") && *expr == '(')
 			{
@@ -375,8 +474,8 @@ static const char *parse_single_num (const char *expr, int *value) {
 				}
 
 				if (*expr == ')') expr++;
-				//If that didn't work, see if it's a macro
 			}
+			//If that didn't work, see if it's a macro
 			else if (define)
 			{
 				list_t *args = NULL;
@@ -458,9 +557,9 @@ static const char *parse_single_num (const char *expr, int *value) {
 
 
 /*
-Skips until the next &&, ||,
-<, >, ==, !=, <=, or >=, and
-returns a pointer to it
+* Skips until the next &&, ||,
+* <, >, ==, !=, <=, or >=, and
+* returns a pointer to it
 */
 
 const char *find_next_condition (const char *ptr) {
@@ -490,8 +589,8 @@ const char *find_next_condition (const char *ptr) {
 
 
 /*
-Evaluates the expression in expr, sets value to result, returns
-pointer to end of expression (if depth > 0) or NULL on error.
+* Evaluates the expression in expr, sets value to result, returns
+* pointer to end of expression (if depth > 0) or NULL on error.
 */
 
 static const char *parse_num_full (const char *expr, int *value, int depth) {
@@ -640,8 +739,8 @@ get_op:
 
 
 /*
-Evaluates a hexadecimal string
-returns true if succeeded, false otherwise
+* Evaluates a hexadecimal string
+* returns true if succeeded, false otherwise
 */
 
 bool conv_hex (const char* str, const char *end, int *output_num) {
@@ -675,8 +774,8 @@ bool conv_hex (const char* str, const char *end, int *output_num) {
 
 
 /*
-Evaluates a decimal string
-returns true if succeeded, false otherwise
+* Evaluates a decimal string
+* returns true if succeeded, false otherwise
 */
 
 static bool conv_dec (const char* str, const char *end, int *output_num) {
@@ -705,8 +804,8 @@ static bool conv_dec (const char* str, const char *end, int *output_num) {
 
 
 /*
-Evaluates a binary string
-returns true if succeeded, false otherwise
+* Evaluates a binary string
+* returns true if succeeded, false otherwise
 */
 
 static bool conv_bin (const char* str, const char *end, int *output_num) {

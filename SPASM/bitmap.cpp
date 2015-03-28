@@ -441,8 +441,9 @@ void handle_bitmap(FILE *file)
 			add_label(strdup(base_name), height);
 		}
 
-		for (left = 0; left < _ZL(bi.biWidth); left += width + 2*padding) {
-			for (top = _ZL(bi.biHeight) - height - 2*padding; top >= 0 ; top -= height + 2*padding) {
+		// Changed the following two lines to gain "left to right, then down" traversal, which is normal
+		for (top = _ZL(bi.biHeight) - height - 2*padding; top >= 0 ; top -= height + 2*padding) {
+			for (left = 0; left < _ZL(bi.biWidth); left += width + 2*padding) {
 				int min_w = parse_f("__BM_MIN_W");
 				if (count == 1) goto map_done;
 				if (count != 0) count--;

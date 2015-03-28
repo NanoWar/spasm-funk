@@ -72,9 +72,6 @@ const char typearray[] = {
 	'8','6','*',0x0C,
 };
 
-const char extensions[][4] = {
-	"73P","82P","83P","8XP","85P","86P","85S","86S","8XK","ROM","HEX","BIN"};
-
 int findfield ( unsigned char byte, const unsigned char* buffer );
 int siggen (const unsigned char* hashbuf, unsigned char* sigbuf, int* outf);
 void intelhex (FILE * outfile , const unsigned char* buffer, int size, unsigned int address = 0x4000);
@@ -93,26 +90,7 @@ void write_file (const unsigned char *output_contents, int output_len, const cha
 	curr_input_file = strdup(_T("exporter"));
 	line_num = -1;
 
-
-	//get the type from the extension of the output filename
-	for (i = strlen (output_filename); output_filename[i] != '.' && i; i--);
-	if (i != 0) {
-		const char *ext = output_filename + i + 1;
-
-		for (calc = 0; calc < ARRAYSIZE(extensions); calc++) {
-			if (!_stricmp (ext, extensions[calc]))
-				break;
-		}
-
-		if (calc == ARRAYSIZE(extensions)) {
-			SetLastSPASMWarning(SPASM_WARN_UNKNOWN_EXTENSION);
-			calc = ARRAYSIZE(extensions) - 1;
-		}
-
-	} else {
-		//show_warning ("No output extension given, assuming .bin");
-		calc = 10;
-	}
+	calc = get_output_type ();
 
 	//open the output file
 	outfile = fopen (output_filename, "wb");
@@ -175,7 +153,6 @@ void write_file (const unsigned char *output_contents, int output_len, const cha
 		break;
 	}
 
-
 	fclose (outfile);
 	free(curr_input_file);
 	curr_input_file = NULL;
@@ -212,7 +189,7 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 		}
 		if (tempnum<1024 && (size+96)>>14)
 		{
-			SetLastSPASMWarning(SPASM_WARN_SMALL_LAST_PAGE, tempnum);
+			//SetLastSPASMWarning(SPASM_WARN_SMALL_LAST_PAGE, tempnum);
 		}
 	}
 

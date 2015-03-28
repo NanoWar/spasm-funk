@@ -2,6 +2,7 @@ ipch/
 **/Win32/
 **/Win64/
 **/*.sdf
+**/*.suo
 **/*.opensdf
 **/*.exe
 SPASM/SPASM_h.h

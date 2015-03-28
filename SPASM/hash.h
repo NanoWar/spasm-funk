@@ -2,6 +2,8 @@
 #define HASH_H_
 
 #include "list.h"
+#include "storage.h"
+#include <unordered_map>
 
 typedef struct {
 	char *name;
@@ -25,33 +27,43 @@ typedef struct _mh_hash_table {
 #pragma warning(default : 4200)
 #else
 
-	struct mystringhash
-		: public std::unary_function<const char *, size_t>
-	{	// hash functor for basic_string
+#ifdef _WINDOWS
+struct mystringhash
+	: public std::unary_function<const char *, size_t>
+{	// hash functor for basic_string
 	size_t operator()(const char* _Keyval) const
-		{	// hash _Keyval to size_t value by pseudorandomizing transform
+	{	// hash _Keyval to size_t value by pseudorandomizing transform
 		return (murmur_hash(_Keyval,
 			strlen(_Keyval)));
-		}
-	};
+	}
+};
 
-	struct myequalto
-		: public std::binary_function<const char *, const char *, bool>
-	{	// functor for operator==
+struct myequalto
+	: public std::binary_function<const char *, const char *, bool>
+{	// functor for operator==
 	bool operator()(const char * _Left, const char *_Right) const
-		{	// apply operator== to operands
+	{	// apply operator== to operands
 		return (strcmp(_Left, _Right) == 0) ? true: false;
-		}
-	};
+	}
+};
+
 typedef struct
 {
 	typedef std::unordered_map<const char *, void*, mystringhash, myequalto> maptype;
-	 maptype *table;
+	maptype *table;
 	void (*remove_callback)(void *);
 	//list_t *list;
 	void *single_element;
 }
 hash_t;
+#else
+typedef struct _mh_hash_table {
+	size_t size, used;
+	void (*remove_callback)(void *);
+	store_t *table[0];
+} hash_t;
+#endif
+
 
 #endif
 

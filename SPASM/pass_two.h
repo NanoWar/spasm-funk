@@ -12,7 +12,12 @@ typedef enum {
 
 typedef enum {
 	OUTPUT_ECHO,
-	OUTPUT_SHOW
+	OUTPUT_SHOW,
+	OUTPUT_LOG_FATAL,
+	OUTPUT_LOG_ERROR,
+	OUTPUT_LOG_WARNING,
+	OUTPUT_LOG_INFO,
+	OUTPUT_LOG_DEBUG
 } output_type;
 
 typedef struct tagexpr{

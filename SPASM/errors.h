@@ -72,7 +72,7 @@ SPASMERROR, *LPSPASMERROR;
 #ifndef _ERRORS_CPP
 extern
 #endif
-	SPASMERROR g_ErrorCodes[]
+SPASMERROR g_ErrorCodes[]
 #ifdef _ERRORS_CPP
 =
 {
@@ -122,7 +122,7 @@ extern
 	{SPASM_ERR_SIGNER_PRGM_TYPE,		_T("Program type field missing or incorrect")},
 	{SPASM_ERR_SIGNER_MISSING_PAGES,	_T("Page count field missing")},
 	{SPASM_ERR_SIGNER_MISSING_NAME,		_T("Name field missing")},
-	{SPASM_ERR_SIGNER_ROOM_FOR_SIG,		_T("Not enough room for signature on last page")},
+	{SPASM_ERR_SIGNER_ROOM_FOR_SIG,		_T("Not enough room for signature on last page (96 bytes)")},
 
 	{SPASM_ERR_CUSTOM,					_T("%s")},
 

@@ -222,7 +222,7 @@ void run_second_pass () {
 		case OUTPUT_ECHO:
 			{
 				WORD orig_attributes = save_console_attributes();
-				set_console_attributes (COLOR_GREEN);
+				set_console_attributes (COLOR_WHITE);
 				int session = StartSPASMErrorSession();
 				parse_emit_string (output_list->expr, ES_ECHO, stdout);
 				ReplaySPASMErrorSession(session);
@@ -239,6 +239,66 @@ void run_second_pass () {
 					break;
 				}
 				show_define (define);
+				break;
+			}
+		case OUTPUT_LOG_FATAL:
+			{
+				WORD orig_attributes = save_console_attributes();
+				set_console_attributes (LOG_COLORS[0]);
+				int session = StartSPASMErrorSession();
+				fprintf(stdout, "Fatal: ");
+				parse_emit_string (output_list->expr, ES_ECHO, stdout);
+				ReplaySPASMErrorSession(session);
+				EndSPASMErrorSession(session);
+				restore_console_attributes(orig_attributes);
+				break;
+			}
+		case OUTPUT_LOG_ERROR:
+			{
+				WORD orig_attributes = save_console_attributes();
+				set_console_attributes (LOG_COLORS[1]);
+				int session = StartSPASMErrorSession();
+				fprintf(stdout, "Error: ");
+				parse_emit_string (output_list->expr, ES_ECHO, stdout);
+				ReplaySPASMErrorSession(session);
+				EndSPASMErrorSession(session);
+				restore_console_attributes(orig_attributes);
+				break;
+			}
+		case OUTPUT_LOG_WARNING:
+			{
+				WORD orig_attributes = save_console_attributes();
+				set_console_attributes (LOG_COLORS[2]);
+				int session = StartSPASMErrorSession();
+				fprintf(stdout, "Warning: ");
+				parse_emit_string (output_list->expr, ES_ECHO, stdout);
+				ReplaySPASMErrorSession(session);
+				EndSPASMErrorSession(session);
+				restore_console_attributes(orig_attributes);
+				break;
+			}
+		case OUTPUT_LOG_INFO:
+			{
+				WORD orig_attributes = save_console_attributes();
+				set_console_attributes (LOG_COLORS[3]);
+				int session = StartSPASMErrorSession();
+				fprintf(stdout, "Info: ");
+				parse_emit_string (output_list->expr, ES_ECHO, stdout);
+				ReplaySPASMErrorSession(session);
+				EndSPASMErrorSession(session);
+				restore_console_attributes(orig_attributes);
+				break;
+			}
+		case OUTPUT_LOG_DEBUG:
+			{
+				WORD orig_attributes = save_console_attributes();
+				set_console_attributes (LOG_COLORS[4]);
+				int session = StartSPASMErrorSession();
+				fprintf(stdout, "Debug: ");
+				parse_emit_string (output_list->expr, ES_ECHO, stdout);
+				ReplaySPASMErrorSession(session);
+				EndSPASMErrorSession(session);
+				restore_console_attributes(orig_attributes);
 				break;
 			}
 		}

@@ -180,7 +180,7 @@ void *hash_lookup (hash_t *ht, const char *name) {
 
 /*
 Removes a hash from a hash table
-return 1 if the item was removed, 0 if otherwise
+  return 1 if the item was removed, 0 if otherwise
 */
 
 int hash_remove (hash_t *ht, const char *name) {

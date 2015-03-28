@@ -115,12 +115,13 @@ void run_first_pass (char *ptr) {
 	line_num = 1;
 	pass_one = true;
 
-	while (!error_occurred && *ptr != '\0') {
+	while (!error_occurred && *ptr != '\0')
+	{
+		line_start = ptr;
 
 		if (mode & MODE_LIST) {
 			//init some listing stuff
 			listing_width = 0;
-			line_start = ptr;
 			old_line_num = line_num;
 			listing_for_line_done = false;
 
@@ -285,8 +286,6 @@ char *handle_opcode_or_macro (char *ptr) {
 		curr_opcode = curr_opcode->next;
 	}
 
-
-
 	//if it was found, then find the right instruction
 	if (curr_opcode && curr_opcode->name) {
 		char *arg_ptrs[3], *arg_end_ptrs[3];
@@ -316,13 +315,13 @@ char *handle_opcode_or_macro (char *ptr) {
 		if (!strncasecmp (name_start, "buf", name_end - name_start) && *ptr == '(') {
 			char buf[256];
 			int value;
-			cur_buf = read_expr(ptr, buf, _T(")"));
+			read_expr(&ptr, buf, _T(")"));
 			if (parse_num(buf, &value)) {
 				cur_buf = value;
 			} else {
 				SetLastSPASMError(SPASM_ERR_INVALID_OPERANDS);
 			}
-			ptr += 2;
+			//ptr += 2;
 		} else if (!strncasecmp (name_start, "clr", name_end - name_start) && *ptr == '(') {
 			expand_buf_t *eb_fcreate = fcreate_bufs[cur_buf];
 			if (eb_fcreate != NULL) {
@@ -390,9 +389,9 @@ char *handle_opcode_or_macro (char *ptr) {
 					last_banner = curr_input_file;
 				}
 
-				free(fcreate_string);
 				eb_free(fcreate_bufs[cur_buf]);
 				fcreate_bufs[cur_buf] = NULL;
+				free(fcreate_string);
 
 				if (GetSPASMErrorSessionErrorCount(session) > 0)
 				{

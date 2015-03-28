@@ -19,15 +19,14 @@ new location in the file
 
 char *handle_directive (const char *ptr) {
 	static const char *dirs[] = {"db", "dw", "end", "org", "byte", "word", "fill", "block", "addinstr",
-		"echo", "error", "list", "nolist", "equ", "show", "option", "seek", NULL};
+		"echo", "error", "list", "nolist", "equ", "show", "option", "seek", "mode", "ext", "warning", "log", NULL};
 	const char *name_end;
 	char name_buf[32];
-	char *name;
 	int dir;
 
 	//same deal as handle_preop, just with directives instead
 	name_end = ptr;
-	while (isalpha(*name_end)) {
+	while (isalnum(*name_end)) {
 		name_buf[name_end - ptr] = *name_end;
 		name_end++;
 	}
@@ -35,7 +34,7 @@ char *handle_directive (const char *ptr) {
 
 	dir = 0;
 	while (dirs[dir]) {
-		if (!strcasecmp (dirs[dir], name_buf))
+		if (!strncasecmp (dirs[dir], name_buf, name_end - ptr))
 			break;
 		dir++;
 	}
@@ -264,10 +263,7 @@ addinstr_fail:
 				}
 
 				//if the output's redirected to a file, process it now
-				WORD orig_attributes = save_console_attributes();
-				set_console_attributes (COLOR_GREEN);
 				ptr = parse_emit_string (ptr, ES_ECHO, echo_target);
-				restore_console_attributes(orig_attributes);
 			} else {
 				char expr[256];
 				read_expr (&ptr, expr, "");
@@ -280,30 +276,19 @@ addinstr_fail:
 				{
 					add_pass_two_output (expr, OUTPUT_ECHO);
 				}
-				else if (GetSPASMErrorSessionErrorCount(session) > 0)
+				else if (GetSPASMErrorSessionErrorCount(session) == 0)
 				{
 					WORD orig_attributes = save_console_attributes();
-					set_console_attributes(COLOR_GREEN);
+					set_console_attributes(COLOR_WHITE);
 					int internal_session = StartSPASMErrorSession();
 					parse_emit_string (expr, ES_ECHO, stdout);
 					restore_console_attributes(orig_attributes);
 					EndSPASMErrorSession(internal_session);
-
 					ReplaySPASMErrorSession(session);
 				}
 				else
 				{
-					expand_buf_t *echo = eb_init(256);
-					parse_emit_string (expr, ES_FCREATE, echo);
-
-					char *echo_string = eb_extract(echo);
-					eb_free(echo);
-
-					char *expanded_string = escape_string(echo_string);
-					free(echo_string);
-
-					add_pass_two_output (expanded_string, OUTPUT_ECHO);
-					free(expanded_string);
+					add_pass_two_output(expr, OUTPUT_ECHO);
 				}
 				EndSPASMErrorSession(session);
 			}
@@ -381,15 +366,13 @@ addinstr_fail:
 			arg_context_t context = ARG_CONTEXT_INITIALIZER;
 			while ((word = extract_arg_string(&ptr, &context)) != NULL)
 			{
-				char name[256], *expr = word;
+				char name[256];
+				char *expr = word;
 				char *define_name;
 				define_t *define;
 
 				read_expr(&expr, name, "=");
-				if (*expr == '=')
-				{
-					expr++;
-				}
+				if (*expr == '=') expr++;
 
 				if (!(isalpha(name[0]))) {
 					SetLastSPASMError(SPASM_ERR_INVALID_OPTION, name);
@@ -426,16 +409,141 @@ addinstr_fail:
 			read_expr (&ptr, value_str, "");
 			parse_num (value_str, (int *) &value);
 
-			//printf("value_str: %s\npc: %d\n", value_str, program_counter);
+			if (get_output_type () == 8) // APP
+			{
+				// In apps a PC of $14000 means start of page 2,
+				// but is actually only at $8000 in the ouput buffer.
+				int app_pc_page = ((int) program_counter & 0xFFFF0000) >> 16;
+				int app_pc = app_pc_page * 0x4000 + ((int) program_counter & 0xFFFF);
+				int app_value_page = (value & 0xFFFF0000) >> 16;
+				int app_value = app_value_page * 0x4000 + (value & 0xFFFF);
 
-			if (value > program_counter && (value - program_counter > output_buf_size - (out_ptr - output_contents)))
-				show_fatal_error ("Seek location %d out of bounds", value);
-			else if (value < program_counter && (value - (int) program_counter + (out_ptr - output_contents) < 0))
-				show_fatal_error ("Seek value %d too small", value);
+				if (app_value > app_pc && (app_value - app_pc > output_buf_size - (out_ptr - output_contents)))
+					show_fatal_error ("Seek location %d out of bounds", value);
+				else if (app_value < app_pc && (app_value - app_pc + (out_ptr - output_contents) < 0))
+					show_fatal_error ("Seek value %d too small", value);
+				out_ptr += app_value - app_pc;
+			}
+			else
+			{
+				if (value > program_counter && (value - (int) program_counter > output_buf_size - (out_ptr - output_contents)))
+					show_fatal_error ("Seek location %d out of bounds", value);
+				else if (value < program_counter && (value - (int) program_counter + (out_ptr - output_contents) < 0))
+					show_fatal_error ("Seek value %d too small", value);
+				out_ptr += value - ((int) program_counter);
+			}
 
-			out_ptr += value - ((int) program_counter);
-			//printf("base: %p; ptr: %p\n", output_contents, out_ptr);
 			program_counter = value;
+			break;
+		}
+	case 17: //MODE
+		{
+			char value_str[256];
+
+			while(read_expr (&ptr, value_str, ","))
+			{
+				if(*ptr == ',') ptr++;
+
+				switch(value_str[0])
+				{
+				case 'C':
+					mode |= MODE_CODE_COUNTER;
+					break;
+				case 'L':
+					mode |= MODE_SYMTABLE;
+					break;
+				case 'S':
+					mode |= MODE_STATS;
+					break;
+				case 'A':
+					set_case_sensitive (true);
+					break;
+				default:
+					show_error("Unknown mode '-%s'", value_str);
+				}
+			}
+			break;
+		}
+	case 18: //EXT
+		{
+			char value_str[256];
+			read_expr (&ptr, value_str, "");
+			if(is_output_type(value_str)) // check if supported
+				output_filename = change_extension(output_filename, value_str);
+			break;
+		}
+	case 19: //WARNING
+		{
+			expand_buf_t *eb = eb_init(64);
+			ptr = parse_emit_string(ptr, ES_FCREATE, eb);
+
+			char *warn_str = eb_extract(eb);
+			eb_free(eb);
+
+			SetLastSPASMWarning(SPASM_ERR_CUSTOM, warn_str);
+			free(warn_str);
+			break;
+		}
+	case 20: //LOG
+		{
+			char expr[256];
+			int level = 0;
+
+			static const char *logLevelStrings[] = { "Fatal", "Error", "Warning", "Info", "Debug", NULL };
+			static const output_type logOutput[] = { OUTPUT_LOG_FATAL, OUTPUT_LOG_ERROR, OUTPUT_LOG_WARNING, OUTPUT_LOG_INFO, OUTPUT_LOG_DEBUG };
+
+			if (*ptr == '>')
+			{
+				// Read log level
+				ptr++;
+				const char * levelStringStart = ptr;
+				read_expr (&ptr, expr, " ");
+
+				while(logLevelStrings[level] != NULL) {
+					if(!strncasecmp(expr, logLevelStrings[level], ptr - levelStringStart)) break;
+					level++;
+				}
+
+				if (logLevelStrings[level] == NULL)
+				{
+					show_error ("Unknown log level '%s'", expr);
+					break;
+				}
+			}
+			else
+			{
+				// Default is "Info"
+				level = 3;
+			}
+
+			// Read expression
+			read_expr (&ptr, expr, "");
+
+			int session = StartSPASMErrorSession();
+			parse_emit_string (expr, ES_ECHO, NULL);
+
+			if (IsSPASMErrorSessionFatal(session) == true)
+			{
+				add_pass_two_output (expr, logOutput[level]);
+			}
+			else if (GetSPASMErrorSessionErrorCount(session) == 0)
+			{
+				WORD orig_attributes = save_console_attributes();
+				set_console_attributes(LOG_COLORS[level]);
+				int internal_session = StartSPASMErrorSession();
+				fprintf(stdout, logLevelStrings[level]);
+				fprintf(stdout, ": ");
+				parse_emit_string (expr, ES_ECHO, stdout);
+				restore_console_attributes(orig_attributes);
+				EndSPASMErrorSession(internal_session);
+				ReplaySPASMErrorSession(session);
+			}
+			else
+			{
+				add_pass_two_output(expr, logOutput[level]);
+			}
+
+			EndSPASMErrorSession(session);
 			break;
 		}
 	}
@@ -466,6 +574,7 @@ void show_define (define_t *define) {
 	{
 		printf (": %s", define->contents);
 	}
+	printf (" (line %d in file '%s')", define->line_num, define->input_file);
 	putchar ('\n');
 	restore_console_attributes(console_attrib);
 
@@ -525,8 +634,9 @@ char *parse_emit_string (const char *ptr, ES_TYPE type, void *echo_target) {
 					program_counter++;
 				}
 			}
-
-		} else {
+		}
+		// Not a string
+		else {
 			int value;
 
 			session = StartSPASMErrorSession();

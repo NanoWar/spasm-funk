@@ -3,6 +3,7 @@
 #include "console.h"
 #include "spasm.h"
 
+
 //saved console attributes, to be restored on exit
 WORD user_attributes;
 

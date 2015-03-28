@@ -94,6 +94,7 @@ char *handle_preop (char *ptr) {
 		{
 			char *name_end, *name;
 			define_t *define;
+			label_t *label;
 			bool condition;
 
 			//get the name of the define to test
@@ -105,9 +106,11 @@ char *handle_preop (char *ptr) {
 			nIfLevel++;
 			name_end = skip_to_name_end (ptr);
 			name = strndup (ptr, name_end - ptr);
+
 			//if it's defined, do all the normal #if stuff
 			define = search_defines (name);
-			condition = (define != NULL) && (define->contents!= NULL);
+			label = search_labels (name);
+			condition = (define != NULL) && (define->contents!= NULL) || (label != NULL);
 			ptr = do_if (name_end, condition);
 			free (name);
 			break;
@@ -116,6 +119,7 @@ char *handle_preop (char *ptr) {
 		{
 			char *name_end, *name;
 			define_t *define;
+			label_t *label;
 			bool condition;
 
 			//get the name of the define to test
@@ -131,7 +135,9 @@ char *handle_preop (char *ptr) {
 
 			//same as #ifdef, but reversed
 			define = search_defines (name);
-			condition = (define == NULL) || (define && (define->contents == NULL));
+			label = search_labels (name);
+			condition = !((define != NULL) && (define->contents!= NULL) || (label != NULL));
+			//condition = (define == NULL) || (define && (define->contents == NULL));
 			ptr = do_if (name_end, condition);
 			free (name);
 			break;
@@ -313,6 +319,7 @@ char *handle_preop_define (const char *ptr) {
 
 		//check for certain special functions
 		read_expr (&eval_ptr, word, "(");
+
 		//handle EVAL, evaluate the contents
 		if (!strcasecmp (word, "eval")) {
 			char expr[256], *new_value;

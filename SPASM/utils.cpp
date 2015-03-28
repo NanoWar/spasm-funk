@@ -13,6 +13,42 @@
 #include "errors.h"
 
 
+const char extensions[][4] = {
+	"73P","82P","83P","8XP","85P","86P","85S","86S","8XK","ROM","HEX","BIN"};
+
+//get the type from the extension of the output filename
+int get_output_type() {
+	int i, type;
+	for (i = strlen (output_filename); output_filename[i] != '.' && i; i--);
+	if (i != 0) {
+		const char *ext = output_filename + i + 1;
+
+		for (type = 0; type < ARRAYSIZE(extensions); type++) {
+			if (!_stricmp (ext, extensions[type]))
+				break;
+		}
+
+		if (type == ARRAYSIZE(extensions)) {
+			SetLastSPASMWarning(SPASM_WARN_UNKNOWN_EXTENSION);
+			type = ARRAYSIZE(extensions) - 1;
+		}
+
+	} else {
+		//show_warning ("No output extension given, assuming .bin");
+		type = 10;
+	}
+	return type;
+}
+
+bool is_output_type(const char *extension)
+{
+	for (int type = 0; type < ARRAYSIZE(extensions); type++) {
+		if (_stricmp (extension, extensions[type]))
+			return true;
+	}
+	return false;
+}
+
 static void destroy_char_value (label_t *label) {
 	if (label->name)
 		free (label->name);
@@ -282,7 +318,7 @@ char *parse_args (const char *ptr, define_t *define, list_t **curr_arg_set) {
 
 				if (*define->args[num_args] == '@')
 				{
-					add_arg(strdup(define->args[num_args++]), strdup(word), *curr_arg_set);
+					add_arg(strdup(define->args[num_args++]+1), strdup(word), *curr_arg_set);
 				}
 				else
 				{
@@ -925,7 +961,7 @@ void show_error(const char *text, ...) {
 void show_fatal_error(const char *text, ...) {
 #ifdef WIN32
 	WORD attr = save_console_attributes();
-	set_console_attributes (COLOR_RED);
+	set_console_attributes (COLOR_BLUE);
 #endif
 
 	va_list args;

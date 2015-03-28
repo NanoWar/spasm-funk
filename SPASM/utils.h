@@ -13,6 +13,8 @@ typedef struct arg_context
 	bool fLiteralArg;
 } arg_context_t;
 
+int get_output_type ();
+bool is_output_type (const char *extension);
 char *eval (const char *expr);
 bool is_end_of_code_line (const char *ptr);
 char *skip_to_next_line (const char *ptr);
