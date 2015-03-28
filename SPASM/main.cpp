@@ -246,6 +246,7 @@ int main (int argc, char **argv)
 	if (argc < 2) {
 		puts ("Usage:\nspasm [options] <input file> <output file>\n");
 		puts ("Options:");
+		puts (" -E = eZ80 mode");
 		puts (" -T = Generate code listing");
 		puts (" -C = Code counter mode");
 		puts (" -L = Symbol table mode");
@@ -286,6 +287,9 @@ int main (int argc, char **argv)
 				//args for different modes
 			case 'O':
 				mode = mode & (~MODE_NORMAL);
+				break;
+			case 'E':
+				mode |= MODE_EZ80;
 				break;
 			case 'T':
 				mode |= MODE_LIST;
