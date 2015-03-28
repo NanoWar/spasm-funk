@@ -12,30 +12,31 @@
 #include "spasm.h"
 #include "errors.h"
 
-
-const char extensions[][4] = {
-	"73P","82P","83P","8XP","85P","86P","85S","86S","8XK","ROM","HEX","BIN"};
-
 //get the type from the extension of the output filename
-int get_output_type() {
-	int i, type;
+calc_type get_output_type() {
+	int i;
+	calc_type type;
+	//get the type from the extension of the output filename
 	for (i = strlen (output_filename); output_filename[i] != '.' && i; i--);
 	if (i != 0) {
 		const char *ext = output_filename + i + 1;
 
-		for (type = 0; type < ARRAYSIZE(extensions); type++) {
-			if (!_stricmp (ext, extensions[type]))
+		int idx;
+		for (idx = 0; idx < ARRAYSIZE(extensions); idx++) {
+			if (!_stricmp (ext, extensions[idx]))
 				break;
 		}
 
-		if (type == ARRAYSIZE(extensions)) {
+		if (idx == ARRAYSIZE(extensions)) {
 			SetLastSPASMWarning(SPASM_WARN_UNKNOWN_EXTENSION);
-			type = ARRAYSIZE(extensions) - 1;
+			idx = ARRAYSIZE(extensions) - 1;
 		}
+
+		type = (calc_type)idx;
 
 	} else {
 		//show_warning ("No output extension given, assuming .bin");
-		type = 10;
+		type = TYPE_BIN;
 	}
 	return type;
 }
@@ -86,7 +87,7 @@ For example: comment, line break (\), or new line
 */
 bool is_end_of_code_line (const char *ptr) {
 	if (ptr == NULL)
-		return NULL;
+		return false;
 
 	return (*ptr == '\0' || *ptr == '\n' || *ptr == '\r' || *ptr == ';' || *ptr == '\\');
 }

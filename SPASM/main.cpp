@@ -241,7 +241,7 @@ int main (int argc, char **argv)
 #ifndef _M_X64
 	printf ("SPASM-ng Z80 Assembler (Version %s, 32-bit)\n", SPASM_NG_VERSION);
 #else
-	printf ("SPASM-ng Z80 Assembler (Version %s, 64-bit)", SPASM_NG_VERSION);
+	printf ("SPASM-ng Z80 Assembler (Version %s, 64-bit)\n", SPASM_NG_VERSION);
 #endif
 
 	//if there aren't enough args, show info

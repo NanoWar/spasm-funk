@@ -1,10 +1,11 @@
 /* wabbit.c -- Wabbitsign, the Free APP signer for TI-83 Plus
-by Spencer Putt and James Montelongo */
+	by Spencer Putt and James Montelongo */
 
 /* Modified for use in SPASM by Don Straney */
 
 #include "stdafx.h"
 
+#include "spasm.h"
 #include "utils.h"
 #include "errors.h"
 
@@ -66,24 +67,26 @@ const char typearray[] = {
 	'8','2','*',0x0B,
 	'8','3','*',0x0B,
 	'8','3','F',0x0D,
+	'8','3','F',0x0D,
 	'8','5','*',0x00,
 	'8','6','*',0x0C,
 	'8','5','*',0x00,
 	'8','6','*',0x0C,
-};
+	};
 
 int findfield ( unsigned char byte, const unsigned char* buffer );
 int siggen (const unsigned char* hashbuf, unsigned char* sigbuf, int* outf);
 void intelhex (FILE * outfile , const unsigned char* buffer, int size, unsigned int address = 0x4000);
-void alphanumeric (char* namestring);
+void alphanumeric (char* namestring, bool allow_lower);
 void makerom (const unsigned char *output_contents, DWORD output_len, FILE *outfile);
 void makehex (const unsigned char *output_contents, DWORD output_len, FILE *outfile);
 void makeapp (const unsigned char *output_contents, DWORD output_len, FILE *outfile, const char *prgmname);
-void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, const char *prgmname, int calc);
+void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, const char *prgmname, calc_type calc);
 
 void write_file (const unsigned char *output_contents, int output_len, const char *output_filename) {
 	FILE *outfile;
-	int i, calc;
+	int i;
+	calc_type calc;
 
 	free(curr_input_file);
 
@@ -105,10 +108,10 @@ void write_file (const unsigned char *output_contents, int output_len, const cha
 	for (i = strlen (output_filename); output_filename[i] != '\\' && output_filename[i] != '/' && i; i--);
 	if (i != 0)
 		i++;
-
+	
 	char prgmname[MAX_PATH];
 	strcpy(prgmname, output_filename);
-
+	
 	for (i = strlen (prgmname); prgmname[i] != '.' && i; i--);
 	if (i != 0)
 		prgmname[i] = '\0';
@@ -116,42 +119,33 @@ void write_file (const unsigned char *output_contents, int output_len, const cha
 	//then decide how to write the contents
 	switch (calc)
 	{
-	case 0:
-		//73p
-	case 1:
-		//82p
-	case 2:
-		//83p
-	case 3:
-		//8xp
-	case 4:
-		//85p
-	case 5:
-		//85s
-	case 6:
-		//86p
-	case 7:
-		//86s
+	case TYPE_73P:
+	case TYPE_82P:
+	case TYPE_83P:
+	case TYPE_8XP:
+	case TYPE_8XV:
+	case TYPE_85P:
+	case TYPE_85S:
+	case TYPE_86P:
+	case TYPE_86S:
 		makeprgm (output_contents, (DWORD) output_len, outfile, prgmname, calc);
 		break;
-	case 8:
-		//8xk
+	case TYPE_8XK:
 		makeapp (output_contents, (DWORD) output_len, outfile, prgmname);
 		break;
-	case 9:
-		//rom
+	case TYPE_ROM:
 		makerom(output_contents, (DWORD) output_len, outfile);
 		break;
-	case 10:
-		//hex
+	case TYPE_HEX:
 		makehex(output_contents, (DWORD) output_len, outfile);
 		break;
+	//bin
 	default:
-		//bin
 		for (i = 0; i < output_len; i++)
 			fputc(output_contents[i], outfile);
 		break;
 	}
+		
 
 	fclose (outfile);
 	free(curr_input_file);
@@ -180,7 +174,7 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 	buffer = (unsigned char *) malloc (size+256);
 	memcpy (buffer, output_contents, sizeof (char) * size);
 
-	/* Check if size will fit in mem with signature */
+/* Check if size will fit in mem with signature */
 	if ((tempnum = ((size+96)%16384))) {
 		if (tempnum < 97 && size > 16384)
 		{
@@ -189,12 +183,12 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 		}
 		if (tempnum<1024 && (size+96)>>14)
 		{
-			//SetLastSPASMWarning(SPASM_WARN_SMALL_LAST_PAGE, tempnum);
+			SetLastSPASMWarning(SPASM_WARN_SMALL_LAST_PAGE, tempnum);
 		}
 	}
 
-	/* Fix app header fields */
-	/* Length Field: set to size of app - 6 */
+/* Fix app header fields */
+/* Length Field: set to size of app - 6 */
 	if (!(buffer[0] == 0x80 && buffer[1] == 0x0F)) {
 		SetLastSPASMError(SPASM_ERR_SIGNER_MISSING_LENGTH);
 		return;
@@ -205,23 +199,23 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 	buffer[4] = (size>> 8) & 0xFF;
 	buffer[5] = size & 0xFF;
 	size += 6;
-	/* Program Type Field: Must be present and shareware (0104) */
+/* Program Type Field: Must be present and shareware (0104) */
 	pnt = findfield(0x12, buffer);
 	if (!pnt || ( buffer[pnt++]!=1) || (buffer[pnt]!=4) ) {
 		SetLastSPASMError(SPASM_ERR_SIGNER_PRGM_TYPE);
 		return;
 	}
-	/* Pages Field: Corrects page num*/
+/* Pages Field: Corrects page num*/
 	pnt = findfield(0x81, buffer);
 	if (!pnt) {
 		SetLastSPASMError(SPASM_ERR_SIGNER_MISSING_PAGES);
 		return;
 	}
-
+	
 	pages = size>>14; /* this is safe because we know there's enough room for the sig */
 	if (size & 0x3FFF) pages++;
 	buffer[pnt] = pages;
-	/* Name Field: MUST BE 8 CHARACTERS, no checking if valid */
+/* Name Field: MUST BE 8 CHARACTERS, no checking if valid */
 	pnt = findfield(0x48, buffer);
 	if (!pnt) {
 		SetLastSPASMError(SPASM_ERR_SIGNER_MISSING_NAME);
@@ -229,7 +223,7 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 	}
 	for (i=0; i < 8 ;i++) name[i]=buffer[i+pnt];
 
-	/* Calculate MD5 */
+/* Calculate MD5 */
 #ifdef WIN32
 	unsigned char hashbuf[64];
 	HCRYPTPROV hCryptProv; 
@@ -244,10 +238,10 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 	MD5 (buffer, size, hashbuf);  //This uses ssl but any good md5 should work fine.
 #endif
 
-	/* Generate the signature to the buffer */
+/* Generate the signature to the buffer */
 	siglength = siggen(hashbuf, buffer+size+3, &f );
 
-	/* append sig */
+/* append sig */
 	buffer[size + 0] = 0x02;
 	buffer[size + 1] = 0x2d;
 	buffer[size + 2] = (unsigned char) siglength;
@@ -256,11 +250,11 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 		buffer[total_size++] = 1;
 		buffer[total_size++] = f;
 	} else buffer[total_size++] = 0;
-	/* sig must be 96 bytes ( don't ask me why) */
+/* sig must be 96 bytes ( don't ask me why) */
 	tempnum = 96 - (total_size - size);
 	while (tempnum--) buffer[total_size++] = 0xFF;
 
-	/* Do 8xk header */
+/* Do 8xk header */
 	for (i = 0; i < hleng; i++) fputc(header8xk[i], outfile);
 	for (i = 0; i < 23; i++)    fputc(0, outfile);
 	fputc(0x73, outfile);
@@ -273,8 +267,8 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 	fputc((tempnum >> 8) & 0xFF, outfile);
 	fputc((tempnum >> 16)& 0xFF, outfile);
 	fputc( tempnum >> 24, outfile);
-
-	/* Convert to 8xk */
+	
+/* Convert to 8xk */
 	intelhex(outfile, buffer, total_size);
 
 #ifdef WIN32
@@ -288,14 +282,14 @@ void makeapp (const unsigned char *output_contents, DWORD size, FILE *outfile, c
 	}
 #endif
 	free(buffer);
-	//    if (pages==1) printf("%s (%d page",filename,pages);
-	//    else printf("%s (%d pages",filename,pages);
-	//	puts(") was successfully generated!");
+//    if (pages==1) printf("%s (%d page",filename,pages);
+//    else printf("%s (%d pages",filename,pages);
+//	puts(") was successfully generated!");
 }
 
 
 /* Starting from 0006 searches for a field
-in the in file buffer. */
+ * in the in file buffer. */
 int findfield( unsigned char byte, const unsigned char* buffer ) {
 	int pnt=6;
 	while (buffer[pnt++] == 0x80) {
@@ -310,15 +304,15 @@ int findfield( unsigned char byte, const unsigned char* buffer ) {
 }
 
 /* Gmp was originally used by Ben Moody, but due to it's massive size
-Spencer wrote his own big num routines,  cutting the size to a tenth 
-of what it was. */
+ * Spencer wrote his own big num routines,  cutting the size to a tenth 
+ * of what it was. */
 int siggen(const unsigned char* hashbuf, unsigned char* sigbuf, int* outf) {
 	mpz_t mhash, p, q, r, s, temp, result;
-
+	
 	unsigned int lp,lq;
 	int siglength;
-
-	/* Intiate vars */
+	
+/* Intiate vars */
 	mpz_init(mhash);
 	mpz_init(p);
 	mpz_init(q);
@@ -326,22 +320,22 @@ int siggen(const unsigned char* hashbuf, unsigned char* sigbuf, int* outf) {
 	mpz_init(s);
 	mpz_init(temp);
 	mpz_init(result);
-
-	/* Import vars */
+	
+/* Import vars */
 	mpz_import(mhash, 16, -1, 1, -1, 0, hashbuf);
 	mpz_import(p, sizeof(pbuf), -1, 1, -1, 0, pbuf);
 	mpz_import(q, sizeof(qbuf), -1, 1, -1, 0, qbuf);
-	/*---------Find F----------*/
-	/*      M' = m*256+1      */
+/*---------Find F----------*/
+/*      M' = m*256+1      */
 	mpz_mul_ui(mhash, mhash, 256);
 	mpz_add_ui(mhash, mhash, 1);
-
-	/* calc f {2, 3,  0, 1 }  */
+	
+/* calc f {2, 3,  0, 1 }  */
 	lp = mpz_legendre(mhash, p) == 1 ? 0 : 1;
 	lq = mpz_legendre(mhash, q) == 1 ? 1 : 0;
 	*outf = lp+lq+lq;
 
-	/*apply f */
+/*apply f */
 	if (lp == lq)
 		mpz_mul_ui(mhash, mhash, 2);
 	if (lq == 0) {
@@ -349,35 +343,35 @@ int siggen(const unsigned char* hashbuf, unsigned char* sigbuf, int* outf) {
 		mpz_sub(mhash, temp, mhash);
 	}
 
-	/* r = ( M' ^ ( ( p + 1) / 4 ) ) mod p */
+/* r = ( M' ^ ( ( p + 1) / 4 ) ) mod p */
 	mpz_import(result, sizeof(p14buf), -1, 1, -1, 0, p14buf);
 	mpz_powm(r, mhash, result, p);
-
-	/* s = ( M' ^ ( ( q + 1) / 4 ) ) mod q */
+	
+/* s = ( M' ^ ( ( q + 1) / 4 ) ) mod q */
 	mpz_import(result, sizeof(q14buf), -1, 1, -1, 0, q14buf);
 	mpz_powm(s, mhash, result, q);
-
-	/* r-s */
+	
+/* r-s */
 	mpz_set_ui(temp, 0);
 	mpz_sub(temp, r, s);
-
-	/* q ^ (p - 2)) */
+	
+/* q ^ (p - 2)) */
 	mpz_import(result, sizeof(qpowpbuf), -1, 1, -1, 0, qpowpbuf);
-
-	/* (r-s) * q^(p-2) mod p */
+	
+/* (r-s) * q^(p-2) mod p */
 	mpz_mul(temp, temp, result);
 	mpz_mod(temp, temp, p);
-
-	/* ((r-s) * q^(p-2) mod p) * q + s */
+	
+/* ((r-s) * q^(p-2) mod p) * q + s */
 	mpz_mul(result, temp, q);
 	mpz_add(result, result, s);
-
-	/* export sig */
+	
+/* export sig */
 	siglength = mpz_sizeinbase(result, 16);
 	siglength = (siglength + 1) / 2;
 	mpz_export(sigbuf, NULL, -1, 1, -1, 0, result);
-
-	/* Clean Up */
+	
+/* Clean Up */
 	mpz_clear(p);
 	mpz_clear(q);
 	mpz_clear(r);
@@ -388,12 +382,12 @@ int siggen(const unsigned char* hashbuf, unsigned char* sigbuf, int* outf) {
 }
 
 
-void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, const char *prgmname, int calc) {
+void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, const char *prgmname, calc_type calc) {
 	int i, temp, chksum;
 	unsigned char* pnt;
 	char *namestring;
-
-	if (calc==1) {
+	
+	if (calc==TYPE_82P) {
 		char name_buf[256];
 		name_buf[0] = (char) 0xDC;
 		name_buf[1] = '\0';
@@ -413,14 +407,14 @@ void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, co
 			lastSlash = ++p;
 		namestring = strdup (lastSlash);
 		/* The name must be capital letters and numbers */
-		if (calc < 4) {
-			alphanumeric (namestring);
+		if (calc < TYPE_85P) {
+			alphanumeric (namestring, calc == TYPE_8XV);
 		}
 	}
 	/* get size */
 	size += 2;
 	/* 86ers don't need to put the asm token*/
-	if (calc==5) {
+	if (calc==TYPE_86P) {
 		size += 2;
 	}
 	/* size must be smaller than z80 mem */
@@ -431,39 +425,39 @@ void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, co
 			SetLastSPASMWarning(SPASM_WARN_SIGNER_FILE_SIZE_24KB);
 		}
 	}
-
+	
 	/* Lots of pointless header crap */
 	for (i = 0; i < 4; i++)
 		fputc (fileheader[i], outfile);
-	pnt = ((unsigned char*)typearray+(calc<<2));
+	pnt = ((unsigned char*)typearray+((int)calc<<2));
 	fputc (pnt[0],outfile);
 	fputc (pnt[1],outfile);
 	fputc (pnt[2],outfile);
 	fputc (fileheader[i++],outfile);
 	fputc (fileheader[i++],outfile);
-	if (calc == 4) {
+	if (calc == TYPE_85P) {
 		fputc (0x0C,outfile);
 	} else {
 		fputc (fileheader[i++],outfile);
 	}    
 	fputc (fileheader[i++],outfile);
-
+	
 	// Copy in the comment
 	for (i = 0; i < 42; i++)
 		fputc(comment[i],outfile);
 
-	if (calc == 1) size+=3;
+	if (calc == TYPE_82P) size+=3;
 	/* For some reason TI thinks it's important to put the file size */
 	/* dozens of times, I suppose duplicates add security...*/
 	/* yeah right. */
-	if (calc == 4) {
+	if (calc == TYPE_85P) {
 		temp = size + 8 + strlen (namestring);
 	} else {
-		temp = size+15+((calc==3)?2:0)+((calc==5)?1:0);
+		temp = size+15+((calc==TYPE_8XP||calc==TYPE_8XV)?2:0)+((calc==TYPE_86P)?1:0);
 	}
 	fputc(temp & 0xFF,outfile);
 	fputc(temp >> 8,outfile);
-	if (calc==4) {
+	if (calc == TYPE_85P) {
 		chksum = fputc((6+strlen(namestring)),outfile);
 	} else {
 		chksum = fputc(pnt[3],outfile);
@@ -472,27 +466,30 @@ void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, co
 	/* OMG the Size again! */
 	chksum += fputc(size & 0xFF,outfile);
 	chksum += fputc(size>>8,outfile);
-	if ( calc>=4) {
-		if (calc>=6) {
+	if (calc >= TYPE_85P) {
+		if (calc >= TYPE_85S) {
 			chksum += fputc(0x0C,outfile);
 		} else {
 			chksum += fputc(0x12,outfile);
 		}
 		chksum += fputc(strlen(namestring),outfile);
 	} else {
-		chksum += fputc(6,outfile);
+		if (calc != TYPE_8XV)
+			chksum += fputc(6,outfile);
+		else
+			chksum += fputc(0x15,outfile);
 	}
-
+	
 	/* The actual name is placed with padded with zeros */
-	if (calc<4 && calc != 1) { //i know...just leave it for now.
+	if (calc < TYPE_85P && calc != TYPE_82P) {
 		if (!((temp=namestring[0])>='A' && temp<='Z')) show_warning ("First character in name must be a letter.");
 	}
 	for(i = 0; i < 8 && namestring[i]; i++) chksum += fputc(namestring[i], outfile);
-	if (calc != 4 && calc!=6) {
+	if (calc != TYPE_85P && calc != TYPE_85S) {
 		for(;i < 8; i++) fputc(0,outfile);
 	}
 	/* 83+ requires 2 extra bytes */
-	if (calc==3) {
+	if (calc == TYPE_8XP || calc == TYPE_8XV) {
 		fputc(0,outfile);
 		fputc(0,outfile);
 	}
@@ -502,16 +499,22 @@ void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, co
 	size-=2;
 	chksum += fputc(size & 0xFF,outfile);
 	chksum += fputc(size>>8,outfile);
-
+	
 	/* check for BB 6D on 83+ */
-	if ((calc == 3) && !((((unsigned char) output_contents[0]) == 0xBB) && (((unsigned char) output_contents[1]) == 0x6D))) {
-		show_warning ("83+ program does not begin with bytes BB 6D.");
+	if (calc == TYPE_8XP) {
+		unsigned short header = ((unsigned char)output_contents[0])*256 + ((unsigned char)output_contents[1]);
+		if (!(mode & MODE_EZ80) && header != 0xBB6D && header != 0xEF69) {
+			show_warning("83+/84+ program does not begin with bytes BB 6D or EF 69.");
+		}
+		if ((mode & MODE_EZ80) && header != 0xEF7B) {
+			show_warning("84+CE program does not begin with bytes EF 7B.");
+		}
 	}
-	if (calc == 5) {
-		chksum += fputc (0x8E, outfile);
-		chksum += fputc (0x28, outfile);
-		size -= 2;
-	} else if (calc == 1) {
+	if (calc == TYPE_86P) {
+	   chksum += fputc (0x8E, outfile);
+	   chksum += fputc (0x28, outfile);
+	   size -= 2;
+	} else if (calc == TYPE_82P) {
 		chksum += 
 			fputc (0xD5, outfile);
 		chksum += 
@@ -519,8 +522,8 @@ void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, co
 		chksum += 
 			fputc (0x11, outfile);
 	}
-
-	if (calc == 1) size -= 3;
+	
+	if (calc == TYPE_82P) size -= 3;
 	/* Actual program data! */
 	for (i = 0; i < size; i++) {
 		chksum += fputc (output_contents[i], outfile);
@@ -528,28 +531,31 @@ void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, co
 	/* short little endian Checksum */
 	fputc (chksum & 0xFF,outfile);
 	fputc ((chksum >> 8) & 0xFF,outfile);
-	//    printf("%s (%d bytes) was successfully generated!\n",filestring,size);
+//    printf("%s (%d bytes) was successfully generated!\n",filestring,size);
 
 	free (namestring);
 }
 
 
-void alphanumeric (char* namestring) {
+void alphanumeric (char* namestring, bool allow_lower) {
 	char temp;
+	bool force_upper = true;
 
 	while ((temp = *namestring)) {
-		if (temp>='a' && temp<='z') *namestring = temp =(temp-('a'-'A'));
-		if (!( ((temp>='A') && (temp<='Z')) || (temp>='0' && temp<='9') || (temp==0) ) ) {
+		if (force_upper && temp>='a' && temp<='z') *namestring = temp =(temp-('a'-'A'));
+		if (!(((temp >= 'A') && (temp <= 'Z')) || ((temp >= 'a') && (temp <= 'z')) || (temp >= '0' && temp <= '9') || (temp == 0))) {
 			show_warning ("Invalid characters in name. Alphanumeric Only.");
 		}
 		namestring++;
+		if (allow_lower)
+			force_upper = false;
 	}
 }
 
 
 /* Convert binary buffer to Intel hex in TI format
-All pages addressed to $4000 and are only $4000
-bytes long. */
+ * All pages addressed to $4000 and are only $4000
+ * bytes long. */
 void intelhex (FILE* outfile, const unsigned char* buffer, int size, unsigned int base_address) {
 	const char hexstr[] = "0123456789ABCDEF";
 	int page = 0;
@@ -557,16 +563,16 @@ void intelhex (FILE* outfile, const unsigned char* buffer, int size, unsigned in
 	unsigned int ci, temp, i, address;
 	unsigned char chksum;
 	unsigned char outbuf[128];
-
+	
 	//We are in binary mode, we must handle carriage return ourselves.
-
+   
 	while (bpnt < size){
 		fprintf(outfile,":02000002%04X%02X\r\n",page,(unsigned char) ( (~(0x04 + page)) +1));
 		page++;
 		address = base_address;
 		for (i = 0; bpnt < size && i < 512; i++) {
-			chksum = (address>>8) + (address & 0xFF);
-			for(ci = 0; ((ci < 64) && (bpnt < size)); ci++) {
+			 chksum = (address>>8) + (address & 0xFF);
+			 for(ci = 0; ((ci < 64) && (bpnt < size)); ci++) {
 				temp = buffer[bpnt++];
 				outbuf[ci++] = hexstr[temp>>4];
 				outbuf[ci] = hexstr[temp&0x0F];

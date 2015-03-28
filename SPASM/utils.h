@@ -13,7 +13,26 @@ typedef struct arg_context
 	bool fLiteralArg;
 } arg_context_t;
 
-int get_output_type ();
+const char extensions[][4] = {
+	"73P","82P","83P","8XP","8XV","85P","86P","85S","86S","8XK","ROM","HEX","BIN"};
+
+enum calc_type {
+	TYPE_73P = 0,
+	TYPE_82P,
+	TYPE_83P,
+	TYPE_8XP,
+	TYPE_8XV,
+	TYPE_85P,
+	TYPE_86P,
+	TYPE_85S,
+	TYPE_86S,
+	TYPE_8XK,
+	TYPE_ROM,
+	TYPE_HEX,
+	TYPE_BIN
+};
+
+calc_type get_output_type ();
 bool is_output_type (const char *extension);
 char *eval (const char *expr);
 bool is_end_of_code_line (const char *ptr);
