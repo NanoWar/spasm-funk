@@ -1,0 +1,1 @@
+#define SPASM_NG_VERSION "3.1"

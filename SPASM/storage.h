@@ -9,9 +9,10 @@
 #define MAX_PATH PATH_MAX
 #endif
 
-#define MAX_ARGS 16	//max number of args macros can have
-#define MAX_LABELS 7919 //prime number for hash table
-#define MAX_DEFINES 7919 //prime number for hash table
+#define MAX_ARGS 24	//max number of args macros can have
+#define MAX_LABELS 65521 //prime number for hash table
+#define MAX_DEFINES 65521 //prime number for hash table
+#define MAX_REUSABLES 4096 //max number of reusable labels
 
 //used for defines and macros
 typedef struct define {

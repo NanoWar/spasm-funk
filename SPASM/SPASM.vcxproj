@@ -518,6 +518,7 @@ copy /y $(OutDir)$(TargetName)$(TargetExt) $(SolutionDir)bin\</Command>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="modp_ascii.cpp" />
     <ClCompile Include="opcodes.cpp" />
+    <ClCompile Include="opcodes_ez80.cpp" />
     <ClCompile Include="parser.cpp" />
     <ClCompile Include="pass_one.cpp" />
     <ClCompile Include="pass_two.cpp" />
@@ -577,6 +578,7 @@ copy /y $(OutDir)$(TargetName)$(TargetExt) $(SolutionDir)bin\</Command>
     <ClInclude Include="storage.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="utils.h" />
+    <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="SPASM.rc" />

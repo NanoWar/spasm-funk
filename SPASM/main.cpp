@@ -4,6 +4,7 @@
 
 #include "pass_one.h"
 #include "pass_two.h"
+#include "opcodes.h"
 #include "storage.h"
 #include "spasm.h"
 #include "utils.h"
@@ -13,6 +14,7 @@
 #include "console.h"
 #include "errors.h"
 #include "Module.h"
+#include "version.h"
 
 #define LISTING_BUF_SIZE 65536	//initial size of buffer for output listing
 
@@ -237,15 +239,15 @@ int main (int argc, char **argv)
 
 	// Show credits
 #ifndef _M_X64
-	puts ("SPASM Z80 Assembler by Spencer Putt and Don Straney");
+	printf ("SPASM-ng Z80 Assembler (Version %s, 32-bit)\n", SPASM_NG_VERSION);
 #else
-	puts ("SPASM Z80 Assembler by Spencer Putt and Don Straney (64-bit)");
+	printf ("SPASM-ng Z80 Assembler (Version %s, 64-bit)", SPASM_NG_VERSION);
 #endif
 
 	//if there aren't enough args, show info
 	if (argc < 2) {
-		puts ("Usage:\nspasm [options] <input file> <output file>\n");
-		puts ("Options:");
+		puts ("\nUsage:\n spasm [options] <input file> <output file>");
+		puts ("\nOptions:");
 		puts (" -E = eZ80 mode");
 		puts (" -T = Generate code listing");
 		puts (" -C = Code counter mode");
@@ -257,6 +259,9 @@ int main (int argc, char **argv)
 		puts (" -I <directory> = Add include directory");
 		puts (" -D <name>[=value] = Create a define 'name' [with 'value']");
 		puts (" -V <expression> = Pipe expression directly into assembly");
+
+		puts ("\nMade by:\n Spencer Putt, Don Straney, Chris Shappell, Robert Kuhfss,");
+		puts (" Albert Huang and Brendan Fletcher\n");
 
 #if defined(_DEBUG) && defined(WIN32)
 		if (IsDebuggerPresent())
@@ -290,6 +295,7 @@ int main (int argc, char **argv)
 				break;
 			case 'E':
 				mode |= MODE_EZ80;
+				all_opcodes = opcode_list_ez80;
 				break;
 			case 'T':
 				mode |= MODE_LIST;
