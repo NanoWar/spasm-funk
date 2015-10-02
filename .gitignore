@@ -1,4 +1,5 @@
 ipch/
+bin/
 **/Win32/
 **/Win64/
 **/*.sdf

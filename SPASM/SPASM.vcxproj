@@ -563,6 +563,7 @@ copy /y $(OutDir)$(TargetName)$(TargetExt) $(SolutionDir)bin\</Command>
     <ClInclude Include="errors.h" />
     <ClInclude Include="expand_buf.h" />
     <ClInclude Include="gmp.h" />
+    <ClInclude Include="hash.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="modp_ascii.h" />
     <ClInclude Include="Module.h" />

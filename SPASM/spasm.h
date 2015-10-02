@@ -76,6 +76,7 @@ GLOBAL int old_line_num;	//saved line number
 GLOBAL bool pass_one;	//true if pass 1, false if pass 2
 GLOBAL int in_macro;	//depth in macro - 0 if not in macro, 1 if inside macro, 2 if inside macro called from macro...
 GLOBAL bool use_colors;	//whether to use colors or not for messages
+GLOBAL bool is_in_archive; // if the TI83+ variable resides in archive
 GLOBAL EXIT_STATUS exit_code;
 #ifdef USE_REUSABLES
 GLOBAL int total_reusables, curr_reusable;

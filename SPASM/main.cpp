@@ -233,15 +233,16 @@ int main (int argc, char **argv)
 	bool is_storage_initialized = false;
 
 	use_colors = true;
+	is_in_archive = false;
 	extern WORD user_attributes;
 	user_attributes = save_console_attributes ();
 	atexit (restore_console_attributes_at_exit);
 
 	// Show credits
 #ifndef _M_X64
-	printf ("SPASM-ng Z80 Assembler (Version %s, 32-bit)\n", SPASM_NG_VERSION);
+	printf ("SPASM Z80 Assembler %s, 32-bit\n", SPASM_NG_VERSION);
 #else
-	printf ("SPASM-ng Z80 Assembler (Version %s, 64-bit)\n", SPASM_NG_VERSION);
+	printf ("SPASM Z80 Assembler %s, 64-bit\n", SPASM_NG_VERSION);
 #endif
 
 	//if there aren't enough args, show info
@@ -256,12 +257,13 @@ int main (int argc, char **argv)
 		puts (" -O = Don't write to output file");
 		puts (" -A = Labels are cAse-sensitive");
 		puts (" -N = Don't use colors for messages");
+		puts (" -Z = Archived TI83+ variable");
 		puts (" -I <directory> = Add include directory");
 		puts (" -D <name>[=value] = Create a define 'name' [with 'value']");
 		puts (" -V <expression> = Pipe expression directly into assembly");
 
-		puts ("\nMade by:\n Spencer Putt, Don Straney, Chris Shappell, Robert Kuhfss,");
-		puts (" Albert Huang and Brendan Fletcher\n");
+		puts ("\nMade by:\n Spencer Putt, James Montelongo, Don Straney, Chris Shappell,");
+		puts (" Albert Huang, Brendan Fletcher and Robert Kuhfss\n");
 
 #if defined(_DEBUG) && defined(WIN32)
 		if (IsDebuggerPresent())
@@ -313,8 +315,11 @@ int main (int argc, char **argv)
 			case 'N':
 				use_colors = false;
 				break;
-				//handle include files too
+			case 'Z':
+				is_in_archive = true;
+				break;
 			case 'I':
+				//handle include files too
 				{
 					char *dir, *p;
 					//make sure there's another argument after it for the include path

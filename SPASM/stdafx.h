@@ -3,6 +3,13 @@
 #ifndef _STDAFX_H
 #define _STDAFX_H
 
+#ifndef FALSE
+#define FALSE (0)
+#endif
+#ifndef TRUE
+#define TRUE (1)
+#endif
+
 #if defined(_WINDOWS)
 #ifndef STRICT
 #define STRICT

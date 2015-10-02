@@ -491,7 +491,7 @@ void makeprgm (const unsigned char *output_contents, int size, FILE *outfile, co
 	/* 83+ requires 2 extra bytes */
 	if (calc == TYPE_8XP || calc == TYPE_8XV) {
 		fputc(0,outfile);
-		fputc(0,outfile);
+		chksum += fputc(is_in_archive ? 0x80 : 0,outfile);
 	}
 	/*Yeah, lets put the size twice in a row  X( */
 	chksum += fputc(size & 0xFF,outfile);
